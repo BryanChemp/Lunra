@@ -1,15 +1,17 @@
 import styled, { ThemeProvider } from 'styled-components';
 import { theme } from './preferences/theme';
-import Menu from './features/Menu/Menu';
 import Canvas from './features/Canvas/Canvas';
+import MenuLeft from './features/MenuLeft/MenuLeft';
+import MenuRight from './features/MenuRight/MenuRight';
 
 function App() {
 
   return (
     <ThemeProvider theme={theme}>
       <Container>
-        <Menu />
+        <MenuLeft />
         <Canvas/>
+        <MenuRight />
       </Container>
     </ThemeProvider>
   )

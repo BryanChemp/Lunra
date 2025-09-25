@@ -21,8 +21,8 @@ const Container = styled.div`
     gap: 0.5rem;
     width: 100%;
     background-color: ${({ theme }) => theme.neutral.surfaceAlt};
-    padding: 1rem 1.5rem;
-    border-radius: 16px;
+    padding: 8px 16px;
+    border-radius: 4px;
     box-shadow: 0 2px 8px rgba(87, 99, 255, 0.15);
     cursor: pointer;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -37,15 +37,15 @@ const Image = styled.img.attrs(({ theme }) => ({
     src: theme.brand.logo,
     alt: 'Logo',
 }))`
-    width: 2.8rem;
-    height: 2.8rem;
+    width: 1rem;
+    height: 1rem;
     object-fit: contain;
 `;
 
 const Texto = styled.span`
     font-family: "Exo 2", sans-serif;
     font-weight: 700;
-    font-size: 1.4rem;
+    font-size: 0.8rem;
     line-height: 1;
     background: ${({ theme }) => theme.brand.gradientText};
     -webkit-background-clip: text;

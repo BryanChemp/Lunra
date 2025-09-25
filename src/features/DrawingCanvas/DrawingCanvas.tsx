@@ -1,145 +1,134 @@
-import starTexture from '../../assets/textures/star.png';
-import { useRef, useState, useEffect } from "react";
-
+import { useRef, useState, useEffect, type FC } from "react";
 
 type Brush = {
-    size: number;
-    color: string;
-    opacity?: number;
-    shape?: HTMLImageElement | "circle" | "square";
-    spacing?: number;
+  size: number;
+  color: string;
+  opacity?: number;
+  shape?: HTMLImageElement | "circle" | "square";
+  spacing?: number;
 };
 
 const defaultBrush: Brush = {
-    size: 10,
-    color: "#4C6EF5",
-    opacity: 1,
-    shape: "circle",
-    spacing: 1
+  size: 10,
+  color: "#4C6EF5",
+  opacity: 1,
+  shape: "circle",
+  spacing: 1
 };
 
-const DrawingCanvas = () => {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const [isDrawing, setIsDrawing] = useState(false);
-    const [brush, setBrush] = useState<Brush>(defaultBrush);
-    const [lastPos, setLastPos] = useState<{ x: number; y: number } | null>(null);
+type Props = {
+  width: number;
+  height: number;
+  scale: number;
+  offset: { x: number; y: number };
+  isPanning?: boolean;
+  isSpace?: boolean;
+};
 
-    useEffect(() => {
-        const img = new Image();
-        img.src = starTexture;
+const DrawingCanvas: FC<Props> = ({ width, height, scale, offset, isPanning = false, isSpace = false }) => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const isDrawingRef = useRef(false);
+  const lastPosRef = useRef<{ x: number; y: number } | null>(null);
+  const [brush, setBrush] = useState<Brush>(defaultBrush);
 
-        img.onload = () => {
-            setBrush((prev) => ({ ...prev, shape: img }));
-        };
-    }, []);
+  useEffect(() => {
+    const c = canvasRef.current;
+    if (!c) return;
+    const dpr = window.devicePixelRatio || 1;
+    c.style.width = `${width}px`;
+    c.style.height = `${height}px`;
+    c.width = Math.round(width * dpr);
+    c.height = Math.round(height * dpr);
+    const ctx = c.getContext("2d");
+    if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }, [width, height]);
 
-    const startDrawing = (e: React.MouseEvent) => {
-        setIsDrawing(true);
-        const rect = (e.target as HTMLCanvasElement).getBoundingClientRect();
-        setLastPos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
-    };
+  useEffect(() => {
+    if (isPanning) {
+      isDrawingRef.current = false;
+      lastPosRef.current = null;
+    }
+  }, [isPanning]);
 
-    const stopDrawing = () => {
-        setIsDrawing(false);
-        setLastPos(null);
-    };
+  const getLocalCanvasPoint = (e: MouseEvent | React.MouseEvent) => {
+    const c = canvasRef.current!;
+    const rect = c.getBoundingClientRect();
+    const px = (e as MouseEvent).clientX - rect.left;
+    const py = (e as MouseEvent).clientY - rect.top;
+    const wrapper = c.parentElement!;
+    const style = window.getComputedStyle(wrapper);
+    const t = style.transform === "none" ? new DOMMatrix() : new DOMMatrix(style.transform);
+    const inv = t.inverse();
+    const pt = new DOMPoint(px, py).matrixTransform(inv);
+    const cssToCanvasX = c.width / rect.width;
+    const cssToCanvasY = c.height / rect.height;
+    return { x: pt.x * cssToCanvasX, y: pt.y * cssToCanvasY, cssToCanvasX, cssToCanvasY };
+  };
 
-    const draw = (e: React.MouseEvent) => {
-        if (!isDrawing || !canvasRef.current) return;
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
+  const startDrawing = (e: React.MouseEvent) => {
+    if (isSpace) return;
+    if ("button" in e && e.button !== 0) return;
+    isDrawingRef.current = true;
+    const p = getLocalCanvasPoint(e);
+    lastPosRef.current = { x: p.x, y: p.y };
+  };
 
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+  const stopDrawing = () => {
+    isDrawingRef.current = false;
+    lastPosRef.current = null;
+  };
 
-        if (!lastPos) {
-            setLastPos({ x, y });
-            return;
-        }
+  const draw = (e: React.MouseEvent) => {
+    if (!isDrawingRef.current || !canvasRef.current || isPanning) return;
+    const ctx = canvasRef.current.getContext("2d");
+    if (!ctx) return;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    const p = getLocalCanvasPoint(e);
+    const last = lastPosRef.current;
+    if (!last) {
+      lastPosRef.current = { x: p.x, y: p.y };
+      return;
+    }
+    const dx = p.x - last.x;
+    const dy = p.y - last.y;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 0.0001;
+    const spacingCanvas = (brush.spacing || 1) * p.cssToCanvasX;
+    const brushSizeCanvas = brush.size * p.cssToCanvasX;
+    for (let i = 0; i < dist; i += spacingCanvas) {
+      const t = i / dist;
+      const ix = last.x + dx * t;
+      const iy = last.y + dy * t;
+      ctx.globalAlpha = brush.opacity || 1;
+      if (brush.shape instanceof HTMLImageElement) {
+        ctx.drawImage(brush.shape, ix - brushSizeCanvas / 2, iy - brushSizeCanvas / 2, brushSizeCanvas, brushSizeCanvas);
+      } else if (brush.shape === "square") {
+        ctx.fillStyle = brush.color;
+        ctx.fillRect(ix - brushSizeCanvas / 2, iy - brushSizeCanvas / 2, brushSizeCanvas, brushSizeCanvas);
+      } else {
+        ctx.fillStyle = brush.color;
+        ctx.beginPath();
+        ctx.arc(ix, iy, brushSizeCanvas / 2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+    lastPosRef.current = { x: p.x, y: p.y };
+  };
 
-        const dx = x - lastPos.x;
-        const dy = y - lastPos.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        const spacing = brush.spacing || 1;
-
-        for (let i = 0; i < dist; i += spacing) {
-            const t = i / dist;
-            const ix = lastPos.x + dx * t;
-            const iy = lastPos.y + dy * t;
-
-            ctx.globalAlpha = brush.opacity || 1;
-
-            if (brush.shape instanceof HTMLImageElement) {
-                ctx.drawImage(
-                    brush.shape,
-                    ix - brush.size / 2,
-                    iy - brush.size / 2,
-                    brush.size,
-                    brush.size
-                );
-            } else if (brush.shape === "square") {
-                ctx.fillStyle = brush.color;
-                ctx.fillRect(ix - brush.size / 2, iy - brush.size / 2, brush.size, brush.size);
-            } else {
-                ctx.fillStyle = brush.color;
-                ctx.beginPath();
-                ctx.arc(ix, iy, brush.size / 2, 0, Math.PI * 2);
-                ctx.fill();
-            }
-
-            ctx.globalAlpha = 1;
-        }
-
-        setLastPos({ x, y });
-    };
-
-    return (
-        <div>
-            <canvas
-                ref={canvasRef}
-                width={800}
-                height={600}
-                style={{ border: "1px solid #ccc", cursor: "crosshair" }}
-                onMouseDown={startDrawing}
-                onMouseUp={stopDrawing}
-                onMouseLeave={stopDrawing}
-                onMouseMove={draw}
-            />
-            <div style={{ marginTop: 16 }}>
-                <label>
-                    Tamanho:
-                    <input
-                        type="range"
-                        min={1}
-                        max={50}
-                        value={brush.size}
-                        onChange={(e) => setBrush({ ...brush, size: Number(e.target.value) })}
-                    />
-                </label>
-                <label style={{ marginLeft: 16 }}>
-                    Cor:
-                    <input
-                        type="color"
-                        value={brush.color}
-                        onChange={(e) => setBrush({ ...brush, color: e.target.value })}
-                    />
-                </label>
-                <label style={{ marginLeft: 16 }}>
-                    Opacidade:
-                    <input
-                        type="range"
-                        min={0.1}
-                        max={1}
-                        step={0.05}
-                        value={brush.opacity}
-                        onChange={(e) => setBrush({ ...brush, opacity: Number(e.target.value) })}
-                    />
-                </label>
-            </div>
-        </div>
-    );
+  return (
+    <div>
+      <canvas
+        ref={canvasRef}
+        width={width}
+        height={height}
+        style={{ border: "1px solid #ccc", cursor: "crosshair" }}
+        onMouseDown={startDrawing}
+        onMouseUp={stopDrawing}
+        onMouseLeave={stopDrawing}
+        onMouseMove={draw}
+      />
+    </div>
+  );
 };
 
 export default DrawingCanvas;
