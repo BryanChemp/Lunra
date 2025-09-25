@@ -94,7 +94,7 @@ const DrawingCanvas: FC<Props> = ({ width, height, scale, offset, isPanning = fa
     const dist = Math.sqrt(dx * dx + dy * dy) || 0.0001;
 
     const spacingCanvas = (brush.spacing || 1) * p.cssToCanvasX;
-    const brushSizeCanvas = brush.size * scale * p.cssToCanvasX; // <---- aqui, multiplica pelo scale
+    const brushSizeCanvas = brush.size * scale * p.cssToCanvasX;
 
     for (let i = 0; i < dist; i += spacingCanvas) {
         const t = i / dist;
