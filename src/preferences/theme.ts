@@ -1,12 +1,89 @@
-// theme.ts
-export const theme = {
+import logo from '../assets/logo.png';
+
+export interface Brand {
+  primary: string;
+  primaryLight: string;
+  primaryDark: string;
+  primaryAlt: string;
+  gradient: string;
+  gradientText: string;
+  gradientLowOpacity: string;
+  logo: string;
+}
+
+export interface Neon {
+  pink: string;
+  purple: string;
+  blue: string;
+  cyan: string;
+  orange: string;
+}
+
+export interface Primaries {
+  red: string;
+  green: string;
+  blue: string;
+  yellow: string;
+}
+
+export interface Semantic {
+  success: string;
+  info: string;
+  warning: string;
+  error: string;
+}
+
+export interface Neutral {
+  bg: string;
+  surface: string;
+  surfaceAlt: string;
+  muted: string;
+  border: string;
+  shadow: string;
+}
+
+export interface Dark {
+  bg: string;
+  surface: string;
+  surfaceAlt: string;
+  muted: string;
+  border: string;
+  shadow: string;
+}
+
+export interface Text {
+  primary: string;
+  secondary: string;
+  muted: string;
+  onPrimary: string;
+  onNeon: string;
+  darkPrimary: string;
+}
+
+export interface ThemeInterface {
+  name: string;
+  brand: Brand;
+  neon: Neon;
+  primaries: Primaries;
+  semantic: Semantic;
+  neutral: Neutral;
+  dark: Dark;
+  text: Text;
+  type: string;
+}
+
+// Agora definimos o theme usando a interface
+export const theme: ThemeInterface = {
   name: "lunra",
   brand: {
     primary: "#4C6EF5",
     primaryLight: "#9BA7FF",
     primaryDark: "#2B3BB1",
     primaryAlt: "#7B61FF",
-    gradient: "linear-gradient(135deg,#4C6EF5 0%,#E76DD7 50%,#FF9A56 100%)"
+    gradient: "linear-gradient(135deg,#4C6EF5 0%,#E76DD7 50%,#FF9A56 100%)",
+    gradientText: "linear-gradient(135deg, #4C6EF5, #7B61FF)",
+    gradientLowOpacity: "linear-gradient(135deg, rgba(76, 110, 245, 0.07), rgba(123, 97, 255, 0.1))",
+    logo: logo
   },
   neon: {
     pink: "#FF2D95",
@@ -50,7 +127,6 @@ export const theme = {
     onPrimary: "#FFFFFF",
     onNeon: "#0B1220",
     darkPrimary: "#E5E7EB"
-  }
+  },
+  type: ""
 };
-
-export type ThemeType = typeof theme;

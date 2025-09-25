@@ -1,7 +1,14 @@
 {
   "files": [],
+   "compilerOptions": {
+    "types": ["styled-components", "node"],
+    "typeRoots": ["./src/@types", "./node_modules/@types"]
+  },
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
-  ]
+  ],
+  "paths": {
+    "@src/*": ["src/*"]
+  }
 }
