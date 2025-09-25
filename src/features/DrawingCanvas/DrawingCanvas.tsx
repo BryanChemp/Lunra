@@ -1,4 +1,6 @@
+import starTexture from '../../assets/textures/star.png';
 import { useRef, useState, useEffect } from "react";
+
 
 type Brush = {
     size: number;
@@ -21,6 +23,15 @@ const DrawingCanvas = () => {
     const [isDrawing, setIsDrawing] = useState(false);
     const [brush, setBrush] = useState<Brush>(defaultBrush);
     const [lastPos, setLastPos] = useState<{ x: number; y: number } | null>(null);
+
+    useEffect(() => {
+        const img = new Image();
+        img.src = starTexture;
+
+        img.onload = () => {
+            setBrush((prev) => ({ ...prev, shape: img }));
+        };
+    }, []);
 
     const startDrawing = (e: React.MouseEvent) => {
         setIsDrawing(true);
