@@ -1,6 +1,7 @@
 import styled, { ThemeProvider } from 'styled-components';
 import { theme } from './preferences/theme';
 import Menu from './features/Menu/Menu';
+import Canvas from './features/Canvas/Canvas';
 
 function App() {
 
@@ -8,7 +9,7 @@ function App() {
     <ThemeProvider theme={theme}>
       <Container>
         <Menu />
-        <div style={{ display: "flex", flex: 4}}></div>
+        <Canvas/>
       </Container>
     </ThemeProvider>
   )
