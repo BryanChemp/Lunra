@@ -22,6 +22,5 @@ export default App;
 const Container = styled.div`
   width: 100%;
   height: 100%;
-  display: flex;
-  border: 2px solid #ffffff;
+  display: flex; 
 `;

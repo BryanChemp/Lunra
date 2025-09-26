@@ -1,6 +1,6 @@
 import { create } from "zustand"
 
-type Tool = "brush" | "eraser" | "select" | "fill"
+export type Tool = "brush" | "eraser" | "select" | "fill" | "hand" 
 
 type Brush = {
   size: number;

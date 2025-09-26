@@ -37,6 +37,7 @@ export interface Neutral {
   bg: string;
   surface: string;
   surfaceAlt: string;
+  surfaceDark: string;
   muted: string;
   border: string;
   shadow: string;
@@ -106,6 +107,7 @@ export const theme: ThemeInterface = {
   },
   neutral: {
     bg: "#FFFFFF",
+    surfaceDark: "#2d2d2d",
     surface: "#F6F8FA",
     surfaceAlt: "#FFFFFF",
     muted: "#F0F3F7",
