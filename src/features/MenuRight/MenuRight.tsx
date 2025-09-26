@@ -1,11 +1,13 @@
 import type { FC } from "react";
 import styled from "styled-components";
 import ColorPanel from "../ColorPanel/ColorPanel";
+import LayerPanel from "../LayerPanel/LayerPanel";
 
 export const MenuRight: FC = () => {
     return (
         <Container>
-            <ColorPanel />
+            <ColorPanel/>
+            <LayerPanel/>
         </Container>
     )
 }
@@ -22,4 +24,6 @@ const Container = styled.div`
     padding: 1rem; 
     box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
     transition: width 0.3s ease;
+    gap: 1rem;
+    justify-content: space-between;
 `;
