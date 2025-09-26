@@ -1,9 +1,11 @@
 import type { FC } from "react";
 import styled from "styled-components";
+import ColorPanel from "../ColorPanel/ColorPanel";
 
 export const MenuRight: FC = () => {
     return (
         <Container>
+            <ColorPanel />
         </Container>
     )
 }
@@ -16,8 +18,8 @@ const Container = styled.div`
     align-items: center;
     flex: 0.2;
     height: 100%;
-    background-color: ${({ theme }) => theme.neutral.surfaceAlt};
-    padding: 1rem;
+    background-color: ${({ theme }) => theme.neutral.surfaceDark};
+    padding: 1rem; 
     box-shadow: 2px 0 8px rgba(0, 0, 0, 0.05);
     transition: width 0.3s ease;
 `;

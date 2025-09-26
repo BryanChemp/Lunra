@@ -1,7 +1,6 @@
 import { useRef, useEffect, type FC } from "react"
 import styled from "styled-components"
 import DrawingCanvas from "../DrawingCanvas/DrawingCanvas"
-import MenuAbsolute from "../MenuAbsolute/MenuAbsolute"
 import { useCanvasStore } from "../../stores/useCanvasStore"
 
 const Canvas: FC = () => {
@@ -58,7 +57,6 @@ const Canvas: FC = () => {
       onMouseLeave={stopDrag}
       onMouseMove={onDrag}
     >
-      <MenuAbsolute />
       <CanvasWrapper
         style={{
           transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
