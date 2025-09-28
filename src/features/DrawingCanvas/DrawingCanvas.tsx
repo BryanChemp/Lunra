@@ -1,28 +1,25 @@
 import { useRef, useEffect, type FC } from "react"
 import { useDrawingStore } from "../../stores/useDrawingStore"
 import { useCanvasStore } from "../../stores/useCanvasStore"
+import { useLayerStore } from "../../stores/useLayerStore"
 
 type Props = {
   width: number
   height: number
+  layerId: string
+  style?: React.CSSProperties
 }
 
-const DrawingCanvas: FC<Props> = ({
-  width,
-  height,
-}) => {
+const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const isDrawingRef = useRef(false)
   const lastPosRef = useRef<{ x: number; y: number } | null>(null)
 
-  const {
-    scale,
-    isSpace,
-    dragging
-  } = useCanvasStore();
+  const { scale, isSpace, dragging } = useCanvasStore()
   const brush = useDrawingStore((s) => s.brush)
+  const layer = useLayerStore((s) => s.layers.find((l) => l.id === layerId))
 
-  const isPanning = isSpace && dragging;
+  const isPanning = isSpace && dragging
 
   useEffect(() => {
     const c = canvasRef.current
@@ -44,22 +41,18 @@ const DrawingCanvas: FC<Props> = ({
   }, [isPanning])
 
   const getLocalCanvasPoint = (e: MouseEvent | React.MouseEvent) => {
-    const c = canvasRef.current!
-    const rect = c.getBoundingClientRect()
-    const px = (e as MouseEvent).clientX - rect.left
-    const py = (e as MouseEvent).clientY - rect.top
-    const wrapper = c.parentElement!
-    const style = window.getComputedStyle(wrapper)
-    const t = style.transform === "none" ? new DOMMatrix() : new DOMMatrix(style.transform)
-    const inv = t.inverse()
-    const pt = new DOMPoint(px, py).matrixTransform(inv)
-    const cssToCanvasX = c.width / rect.width
-    const cssToCanvasY = c.height / rect.height
-    return { x: pt.x * cssToCanvasX, y: pt.y * cssToCanvasY, cssToCanvasX, cssToCanvasY }
-  }
+  const c = canvasRef.current!
+  const rect = c.getBoundingClientRect()
+  const px = (e as MouseEvent).clientX - rect.left
+  const py = (e as MouseEvent).clientY - rect.top
+  const cssToCanvasX = c.width / rect.width
+  const cssToCanvasY = c.height / rect.height
+  return { x: px * cssToCanvasX, y: py * cssToCanvasY, cssToCanvasX, cssToCanvasY }
+}
+
 
   const startDrawing = (e: React.MouseEvent) => {
-    if (isSpace) return
+    if (isSpace || !layer?.visible) return
     if ("button" in e && e.button !== 0) return
     isDrawingRef.current = true
     const p = getLocalCanvasPoint(e)
@@ -72,16 +65,18 @@ const DrawingCanvas: FC<Props> = ({
   }
 
   const draw = (e: React.MouseEvent) => {
-    if (!isDrawingRef.current || !canvasRef.current || isPanning) return
+    if (!isDrawingRef.current || !canvasRef.current || isPanning || !layer?.visible) return
     const ctx = canvasRef.current.getContext("2d")
     if (!ctx) return
     ctx.setTransform(1, 0, 0, 1, 0, 0)
+
     const p = getLocalCanvasPoint(e)
     const last = lastPosRef.current
     if (!last) {
       lastPosRef.current = { x: p.x, y: p.y }
       return
     }
+
     const dx = p.x - last.x
     const dy = p.y - last.y
     const dist = Math.sqrt(dx * dx + dy * dy) || 0.0001
@@ -122,18 +117,24 @@ const DrawingCanvas: FC<Props> = ({
   }
 
   return (
-    <div>
-      <canvas
-        ref={canvasRef}
-        width={width}
-        height={height}
-        style={{ border: "1px solid #ccc", cursor: "crosshair" }}
-        onMouseDown={startDrawing}
-        onMouseUp={stopDrawing}
-        onMouseLeave={stopDrawing}
-        onMouseMove={draw}
-      />
-    </div>
+    <canvas
+      ref={canvasRef}
+      width={width}
+      height={height}
+      style={{
+        position: "absolute",
+        top: 0,
+        left: 0,
+        cursor: "crosshair",
+        opacity: layer?.visible ? 1 : 0,
+        opacity: layer.visible ? 1 : 0,
+        ...style,
+      }}
+      onMouseDown={startDrawing}
+      onMouseUp={stopDrawing}
+      onMouseLeave={stopDrawing}
+      onMouseMove={draw}
+    />
   )
 }
 

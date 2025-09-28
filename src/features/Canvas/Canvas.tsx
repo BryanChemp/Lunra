@@ -2,9 +2,11 @@ import { useRef, useEffect, type FC } from "react"
 import styled from "styled-components"
 import DrawingCanvas from "../DrawingCanvas/DrawingCanvas"
 import { useCanvasStore } from "../../stores/useCanvasStore"
+import { useLayerStore } from "../../stores/useLayerStore"
 
 const Canvas: FC = () => {
   const { offset, scale, dragging, isSpace, setDragging, setIsSpace, moveOffset, zoomAt } = useCanvasStore()
+  const { layers, selectedLayerId } = useLayerStore()
 
   const lastPos = useRef({ x: 0, y: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
@@ -15,7 +17,12 @@ const Canvas: FC = () => {
 
     const handleWheel = (e: WheelEvent) => {
       e.preventDefault()
-      zoomAt(e.clientX - el.getBoundingClientRect().left, e.clientY - el.getBoundingClientRect().top, e.deltaY, el.getBoundingClientRect())
+      zoomAt(
+        e.clientX - el.getBoundingClientRect().left,
+        e.clientY - el.getBoundingClientRect().top,
+        e.deltaY,
+        el.getBoundingClientRect()
+      )
     }
 
     el.addEventListener("wheel", handleWheel, { passive: false })
@@ -63,11 +70,21 @@ const Canvas: FC = () => {
           transformOrigin: "0 0",
         }}
       >
-        <DrawingCanvas
-          width={1270}
-          height={720}
-        />
-        
+        {layers.map(layer =>
+          <DrawingCanvas
+            key={layer.id}
+            width={1270}
+            height={720}
+            layerId={layer.id}
+            style={{
+              position: "absolute",
+              top: 0,
+              left: 0,
+              zIndex: layer.zIndex,
+              pointerEvents: layer.id === selectedLayerId ? "auto" : "none",
+            }}
+          />
+        )}
       </CanvasWrapper>
     </Container>
   )
@@ -89,4 +106,6 @@ const CanvasWrapper = styled.div`
   top: 0;
   left: 0;
   background-color: #ffffff;
+  width: 1270px;
+  height: 720px;
 `

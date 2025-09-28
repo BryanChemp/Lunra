@@ -1,51 +1,36 @@
-import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons"
+import { faEye, faEyeSlash, faPlus } from "@fortawesome/free-solid-svg-icons"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import type { FC } from "react"
-import { useEffect, useRef, useState } from "react"
 import styled from "styled-components"
 import LayerPreview from "./components/LayerPreview"
-
-interface Layer {
-  id: string
-  name: string
-  visible: boolean
-}
+import { useLayerStore } from "../../stores/useLayerStore"
 
 const LayerPanel: FC = () => {
-  const [layers, setLayers] = useState<Layer[]>([
-    { id: "1", name: "Camada 1", visible: true },
-    { id: "2", name: "Camada 2", visible: true },
-    { id: "3", name: "Camada 3", visible: true },
-  ])
-  const [selectedLayer, setSelectedLayer] = useState<string>("1")
-
-  const toggleVisibility = (id: string) => {
-    setLayers(prev =>
-      prev.map(layer =>
-        layer.id === id ? { ...layer, visible: !layer.visible } : layer
-      )
-    )
-  }
+  const { layers, selectedLayerId, selectLayer, toggleVisibility, addLayer } = useLayerStore()
 
   return (
     <Container>
-      {layers.map(layer => (
+      <AddLayerButton onClick={() => addLayer()}>
+        <FontAwesomeIcon icon={faPlus} /> Nova camada
+      </AddLayerButton>
+
+      {layers.map((layer, index) => (
         <LayerItem
           key={layer.id}
-          $selected={layer.id === selectedLayer}
-          onClick={() => setSelectedLayer(layer.id)}
+          $selected={layer.id === selectedLayerId}
+          onClick={() => selectLayer(layer.id)}
         >
           <PreviewBox>
-            <LayerPreview layerId={layer.id} />
+            <LayerPreview index={index} layer={layer} />
           </PreviewBox>
 
           <LayerName>{layer.name}</LayerName>
 
           <VisibilityButton
-            $selected={layer.id === selectedLayer}
+            $selected={layer.id === selectedLayerId}
             onClick={(e) => { e.stopPropagation(); toggleVisibility(layer.id) }}
           >
-            <FontAwesomeIcon icon={layer.visible ? faEye : faEyeSlash}/>
+            <FontAwesomeIcon icon={layer.visible ? faEye : faEyeSlash} />
           </VisibilityButton>
         </LayerItem>
       ))}
@@ -68,13 +53,29 @@ const Container = styled.div`
   font-family: sans-serif;
 `
 
+const AddLayerButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  background: #18a77a;
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  &:hover {
+    background: #149563;
+  }
+`
+
 const LayerItem = styled.div<{ $selected: boolean }>`
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
   padding: 8px;
-  color: ${({ $selected }) => $selected ? "#ffffff" : "#cccccc"};
+  color: ${({ $selected }) => ($selected ? "#ffffff" : "#cccccc")};
   background: ${({ $selected }) => ($selected ? "#444" : "transparent")};
   border-radius: 4px;
   cursor: pointer;
@@ -100,7 +101,7 @@ const LayerName = styled.div`
 const VisibilityButton = styled.button<{ $selected: boolean }>`
   background: none;
   border: none;
-  color: ${({ $selected }) => $selected ? "#ffffff" : "#cccccc"};
+  color: ${({ $selected }) => ($selected ? "#ffffff" : "#cccccc")};
   cursor: pointer;
   font-size: 14px;
 `

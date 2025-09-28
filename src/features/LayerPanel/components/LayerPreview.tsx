@@ -1,6 +1,12 @@
 import { useEffect, useRef, type FC } from "react"
+import type { Layer } from "../../../stores/useLayerStore"
 
-const LayerPreview: FC<{ layerId: string }> = ({ layerId }) => {
+interface Props {
+    index: number;
+    layer: Layer;
+}
+
+const LayerPreview: FC<Props> = ({ index, layer }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
 
   useEffect(() => {
@@ -15,8 +21,8 @@ const LayerPreview: FC<{ layerId: string }> = ({ layerId }) => {
 
     ctx.fillStyle = "white"
     ctx.font = "10px sans-serif"
-    ctx.fillText(layerId, 5, 12)
-  }, [layerId])
+    ctx.fillText((index + 1).toString(), 5, 12)
+  }, [layer])
 
   return <canvas ref={canvasRef} width={60} height={60} />
 }
