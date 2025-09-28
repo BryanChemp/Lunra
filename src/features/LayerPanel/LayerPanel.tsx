@@ -1,8 +1,9 @@
 import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons"
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome"
 import type { FC } from "react"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import styled from "styled-components"
+import LayerPreview from "./components/LayerPreview"
 
 interface Layer {
   id: string
@@ -34,13 +35,18 @@ const LayerPanel: FC = () => {
           $selected={layer.id === selectedLayer}
           onClick={() => setSelectedLayer(layer.id)}
         >
-            <VisibilityButton
-                $selected={layer.id === selectedLayer}
-                onClick={(e) => { e.stopPropagation(); toggleVisibility(layer.id) }}
-            >
+          <PreviewBox>
+            <LayerPreview layerId={layer.id} />
+          </PreviewBox>
+
+          <LayerName>{layer.name}</LayerName>
+
+          <VisibilityButton
+            $selected={layer.id === selectedLayer}
+            onClick={(e) => { e.stopPropagation(); toggleVisibility(layer.id) }}
+          >
             <FontAwesomeIcon icon={layer.visible ? faEye : faEyeSlash}/>
           </VisibilityButton>
-          {layer.name}
         </LayerItem>
       ))}
     </Container>
@@ -65,6 +71,7 @@ const Container = styled.div`
 const LayerItem = styled.div<{ $selected: boolean }>`
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   padding: 8px;
   color: ${({ $selected }) => $selected ? "#ffffff" : "#cccccc"};
@@ -76,6 +83,20 @@ const LayerItem = styled.div<{ $selected: boolean }>`
   }
 `
 
+const PreviewBox = styled.div`
+  width: 60px;
+  height: 60px;
+  border: 1px solid #666;
+  border-radius: 4px;
+  overflow: hidden;
+  flex-shrink: 0;
+`
+
+const LayerName = styled.div`
+  flex: 1;
+  font-size: 14px;
+`
+
 const VisibilityButton = styled.button<{ $selected: boolean }>`
   background: none;
   border: none;
@@ -83,7 +104,3 @@ const VisibilityButton = styled.button<{ $selected: boolean }>`
   cursor: pointer;
   font-size: 14px;
 `
-
-const PreviewCanvas = styled.div`
-    width: 100%;
-`;
