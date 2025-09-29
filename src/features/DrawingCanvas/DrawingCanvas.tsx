@@ -127,7 +127,6 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
         left: 0,
         cursor: "crosshair",
         opacity: layer?.visible ? 1 : 0,
-        opacity: layer.visible ? 1 : 0,
         ...style,
       }}
       onMouseDown={startDrawing}
