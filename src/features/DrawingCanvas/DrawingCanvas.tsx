@@ -16,10 +16,15 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
   const lastPosRef = useRef<{ x: number; y: number } | null>(null)
 
   const { scale, isSpace, dragging } = useCanvasStore()
-  const brush = useDrawingStore((s) => s.brush)
-  const layer = useLayerStore((s) => s.layers.find((l) => l.id === layerId))
+  const { brush, tool } = useDrawingStore();
+  const { layers } = useLayerStore();
+  const layer = layers.find((l) => l.id === layerId);
 
-  const isPanning = isSpace && dragging
+  const handMode = tool === "hand";
+  const eraseMode = tool === "eraser";
+  const fillMode = tool === "fill";
+  
+  const isPanning = (isSpace || handMode) && dragging;
 
   useEffect(() => {
     const c = canvasRef.current
@@ -41,23 +46,88 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
   }, [isPanning])
 
   const getLocalCanvasPoint = (e: MouseEvent | React.MouseEvent) => {
-  const c = canvasRef.current!
-  const rect = c.getBoundingClientRect()
-  const px = (e as MouseEvent).clientX - rect.left
-  const py = (e as MouseEvent).clientY - rect.top
-  const cssToCanvasX = c.width / rect.width
-  const cssToCanvasY = c.height / rect.height
-  return { x: px * cssToCanvasX, y: py * cssToCanvasY, cssToCanvasX, cssToCanvasY }
-}
+    const c = canvasRef.current!
+    const rect = c.getBoundingClientRect()
+    const px = (e as MouseEvent).clientX - rect.left
+    const py = (e as MouseEvent).clientY - rect.top
+    const cssToCanvasX = c.width / rect.width
+    const cssToCanvasY = c.height / rect.height
+    return { x: px * cssToCanvasX, y: py * cssToCanvasY, cssToCanvasX, cssToCanvasY }
+  }
 
+    const getPixelColor = (imageData: ImageData, x: number, y: number) => {
+    const index = (y * imageData.width + x) * 4
+    const d = imageData.data
+    return [d[index], d[index + 1], d[index + 2], d[index + 3]]
+  }
+
+  const hexToRgba = (hex: string, opacity: number) => {
+    const bigint = parseInt(hex.replace("#", ""), 16)
+    const r = (bigint >> 16) & 255
+    const g = (bigint >> 8) & 255
+    const b = bigint & 255
+    return [r, g, b, Math.round(opacity * 255)]
+  }
+
+  const floodFill = (imageData: ImageData, x: number, y: number, targetColor: number[], fillColor: number[]) => {
+    const width = imageData.width
+    const height = imageData.height
+    const data = imageData.data
+    const stack = [[x, y]]
+
+    const matchColor = (px: number, py: number) => {
+      const idx = (py * width + px) * 4
+      return (
+        data[idx] === targetColor[0] &&
+        data[idx + 1] === targetColor[1] &&
+        data[idx + 2] === targetColor[2] &&
+        data[idx + 3] === targetColor[3]
+      )
+    }
+
+    const setColor = (px: number, py: number) => {
+      const idx = (py * width + px) * 4
+      data[idx] = fillColor[0]
+      data[idx + 1] = fillColor[1]
+      data[idx + 2] = fillColor[2]
+      data[idx + 3] = fillColor[3]
+    }
+
+    while (stack.length) {
+      const [px, py] = stack.pop()!
+      if (px < 0 || py < 0 || px >= width || py >= height) continue
+      if (!matchColor(px, py)) continue
+      setColor(px, py)
+      stack.push([px + 1, py])
+      stack.push([px - 1, py])
+      stack.push([px, py + 1])
+      stack.push([px, py - 1])
+    }
+  }
 
   const startDrawing = (e: React.MouseEvent) => {
     if (isSpace || !layer?.visible) return
     if ("button" in e && e.button !== 0) return
+
+    if (fillMode && canvasRef.current) {
+      const c = canvasRef.current
+      const ctx = c.getContext("2d")
+      if (!ctx) return
+      const { x, y } = getLocalCanvasPoint(e)
+
+      const imageData = ctx.getImageData(0, 0, c.width, c.height)
+      const targetColor = getPixelColor(imageData, Math.floor(x), Math.floor(y))
+      const fillColor = hexToRgba(brush.color, brush.opacity || 1)
+      floodFill(imageData, Math.floor(x), Math.floor(y), targetColor, fillColor)
+      ctx.putImageData(imageData, 0, 0)
+      return
+    }
+
     isDrawingRef.current = true
     const p = getLocalCanvasPoint(e)
     lastPosRef.current = { x: p.x, y: p.y }
   }
+
 
   const stopDrawing = () => {
     isDrawingRef.current = false
@@ -89,7 +159,16 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
       const ix = last.x + dx * t
       const iy = last.y + dy * t
       ctx.globalAlpha = brush.opacity || 1
-      if (brush.shape instanceof HTMLImageElement) {
+
+      if (eraseMode) {
+        ctx.clearRect(
+          ix - brushSizeCanvas / 2,
+          iy - brushSizeCanvas / 2,
+          brushSizeCanvas,
+          brushSizeCanvas
+        )
+      }
+      else if (brush.shape instanceof HTMLImageElement) {
         ctx.drawImage(
           brush.shape,
           ix - brushSizeCanvas / 2,

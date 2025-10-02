@@ -1,5 +1,7 @@
 import { create } from "zustand"
 
+
+
 export interface Layer {
   id: string
   name: string
@@ -17,9 +19,18 @@ interface LayerState {
   reorderLayer: (id: string, newIndex: number) => void
 }
 
+const initialLayers: Layer[] = [
+  {
+    id: crypto.randomUUID(),
+    name: "Camada 1",
+    visible: true,
+    zIndex: 0
+  }
+]
+
 export const useLayerStore = create<LayerState>((set, get) => ({
-  layers: [],
-  selectedLayerId: "1",
+  layers: initialLayers,
+  selectedLayerId: initialLayers[0].id,
 
   addLayer: (name = `Camada ${get().layers.length + 1}`) => {
     const newLayer: Layer = {

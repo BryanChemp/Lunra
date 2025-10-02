@@ -4,10 +4,14 @@ import DrawingCanvas from "../DrawingCanvas/DrawingCanvas"
 import { useCanvasStore } from "../../stores/useCanvasStore"
 import { useLayerStore } from "../../stores/useLayerStore"
 import MenuTop from "../MenuTop/MenuTop"
+import { useDrawingStore } from "../../stores/useDrawingStore"
 
 const Canvas: FC = () => {
   const { offset, scale, dragging, isSpace, setDragging, setIsSpace, moveOffset, zoomAt } = useCanvasStore()
+  const { tool } = useDrawingStore();
   const { layers, selectedLayerId } = useLayerStore()
+
+  const handMode = tool === "hand";
 
   const lastPos = useRef({ x: 0, y: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
@@ -38,10 +42,11 @@ const Canvas: FC = () => {
   }
 
   const startDrag = (e: React.MouseEvent) => {
-    if (!isSpace) return
-    setDragging(true)
-    lastPos.current = { x: e.clientX, y: e.clientY }
-    e.preventDefault()
+    if (isSpace || handMode) {
+      setDragging(true)
+      lastPos.current = { x: e.clientX, y: e.clientY }
+      e.preventDefault()
+    }
   }
 
   const stopDrag = () => setDragging(false)
