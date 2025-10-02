@@ -2,6 +2,7 @@ import { useRef, useEffect, type FC } from "react"
 import { useDrawingStore } from "../../stores/useDrawingStore"
 import { useCanvasStore } from "../../stores/useCanvasStore"
 import { useLayerStore } from "../../stores/useLayerStore"
+import { useKeyboardKeyListener } from "../../hooks/useKeyboardKeyListener"
 
 type Props = {
   width: number
@@ -26,6 +27,17 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
   
   const isPanning = (isSpace || handMode) && dragging;
 
+  const undoStack = useRef<ImageData[]>([])
+  const redoStack = useRef<ImageData[]>([])
+
+  useEffect(() => {
+    if (!canvasRef.current) return
+    const ctx = canvasRef.current.getContext("2d")
+    if (!ctx) return
+    const snapshot = ctx.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height)
+    undoStack.current.push(snapshot)
+  }, [])
+
   useEffect(() => {
     const c = canvasRef.current
     if (!c) return
@@ -44,6 +56,47 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
       lastPosRef.current = null
     }
   }, [isPanning])
+
+  const saveState = () => {
+    if (!canvasRef.current) return
+    const ctx = canvasRef.current.getContext("2d")
+    if (!ctx) return
+    const snapshot = ctx.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height)
+    undoStack.current.push(snapshot)
+    // ao salvar nova ação, limpar o redo
+    redoStack.current = []
+  }
+
+  const undo = () => {
+    if (!canvasRef.current) return
+    const ctx = canvasRef.current.getContext("2d")
+    if (!ctx) return
+    if (undoStack.current.length > 1) {
+      const last = undoStack.current.pop()!
+      redoStack.current.push(last)
+      const prev = undoStack.current[undoStack.current.length - 1]
+      ctx.putImageData(prev, 0, 0)
+    }
+  }
+
+  const redo = () => {
+    console.log("passando no redo")
+    if (!canvasRef.current) return
+    const ctx = canvasRef.current.getContext("2d")
+    if (!ctx) return
+    if (redoStack.current.length > 0) {
+      const snapshot = redoStack.current.pop()!
+      undoStack.current.push(snapshot)
+      ctx.putImageData(snapshot, 0, 0)
+    }
+  }
+
+  useKeyboardKeyListener({
+    "Control+z": undo,
+    "Control+Shift+z": redo,
+    "Control+y": redo,
+    "Meta+z": redo
+  })
 
   const getLocalCanvasPoint = (e: MouseEvent | React.MouseEvent) => {
     const c = canvasRef.current!
@@ -130,8 +183,10 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
 
 
   const stopDrawing = () => {
+    if (!isDrawingRef.current) return
     isDrawingRef.current = false
     lastPosRef.current = null
+    saveState()
   }
 
   const draw = (e: React.MouseEvent) => {

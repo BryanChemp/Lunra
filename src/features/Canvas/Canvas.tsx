@@ -3,7 +3,6 @@ import styled from "styled-components"
 import DrawingCanvas from "../DrawingCanvas/DrawingCanvas"
 import { useCanvasStore } from "../../stores/useCanvasStore"
 import { useLayerStore } from "../../stores/useLayerStore"
-import MenuTop from "../MenuTop/MenuTop"
 import { useDrawingStore } from "../../stores/useDrawingStore"
 
 const Canvas: FC = () => {
@@ -70,8 +69,6 @@ const Canvas: FC = () => {
       onMouseLeave={stopDrag}
       onMouseMove={onDrag}
     >
-      <MenuTop/>
-
       <CanvasWrapper
         style={{
           transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
