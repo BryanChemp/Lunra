@@ -6,25 +6,42 @@ interface Props {
     layer: Layer;
 }
 
-const LayerPreview: FC<Props> = ({ index, layer }) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null)
+const LayerPreview: FC<Props> = ({ layer }) => {
+  const previewRef = useRef<HTMLCanvasElement | null>(null)
 
   useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext("2d")
+    const preview = previewRef.current
+    const layerCanvas = layer.canvasRef?.current
+    if (!preview || !layerCanvas) return
+    const ctx = preview.getContext("2d")
     if (!ctx) return
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
-    ctx.fillStyle = "#18a77a"
-    ctx.fillRect(10, 10, 40, 40)
+    const drawPreview = () => {
+      const layerCtx = layerCanvas.getContext("2d")
+      if (!layerCtx) return
+      const pixel = layerCtx.getImageData(0, 0, 1, 1).data
+      const isTransparent = pixel[3] === 0
 
-    ctx.fillStyle = "white"
-    ctx.font = "10px sans-serif"
-    ctx.fillText((index + 1).toString(), 5, 12)
+      if (isTransparent) {
+        ctx.fillStyle = "#ffffff"
+        ctx.fillRect(0, 0, preview.width, preview.height)
+      } else {
+        ctx.clearRect(0, 0, preview.width, preview.height)
+      }
+
+      ctx.drawImage(
+        layerCanvas,
+        0, 0, layerCanvas.width, layerCanvas.height,
+        0, 0, preview.width, preview.height
+      )
+      requestAnimationFrame(drawPreview)
+    }
+
+    drawPreview()
   }, [layer])
 
-  return <canvas ref={canvasRef} width={60} height={60} />
+
+  return <canvas ref={previewRef} width={60} height={60} />
 }
 
 export default LayerPreview;

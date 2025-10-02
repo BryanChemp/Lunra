@@ -1,4 +1,4 @@
-import { useRef, useEffect, type FC } from "react"
+import { useRef, useEffect, type FC, useLayoutEffect } from "react"
 import { useDrawingStore } from "../../stores/useDrawingStore"
 import { useCanvasStore } from "../../stores/useCanvasStore"
 import { useLayerStore } from "../../stores/useLayerStore"
@@ -17,11 +17,10 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const isDrawingRef = useRef(false)
   const lastPosRef = useRef<{ x: number; y: number } | null>(null)
-  const fillLockedRef = useRef(false)
 
   const { scale, isSpace, dragging } = useCanvasStore()
   const { brush, tool } = useDrawingStore();
-  const { layers } = useLayerStore();
+  const { layers, updateLayerCanvasRef  } = useLayerStore();
   const layer = layers.find((l) => l.id === layerId);
 
   const { undo, redo, saveState } = useStateStack(canvasRef);
@@ -39,6 +38,13 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
   
   const isPanning = (isSpace || handMode) && dragging;
 
+  useLayoutEffect(() => {
+  if (!layer) return
+  if (!layer.canvasRef) {
+    updateLayerCanvasRef(layer.id, canvasRef)
+  }
+}, [layer, canvasRef, updateLayerCanvasRef])
+
   useEffect(() => {
     const c = canvasRef.current
     if (!c) return
@@ -48,7 +54,14 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
     c.width = Math.round(width * dpr)
     c.height = Math.round(height * dpr)
     const ctx = c.getContext("2d")
-    if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    if (ctx) {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+
+      if (layers.length == 1) {
+        ctx.fillStyle = "#ffffff"
+        ctx.fillRect(0, 0, c.width, c.height)
+      }
+    }
   }, [width, height])
 
   useEffect(() => {
@@ -141,7 +154,6 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
       const targetColor = getPixelColor(imageData, Math.floor(x), Math.floor(y))
       const fillColor = hexToRgba(brush.color, brush.opacity || 1)
 
-      // se a cor do pixel clicado já é igual à cor do brush, não faz nada
       if (
         targetColor[0] === fillColor[0] &&
         targetColor[1] === fillColor[1] &&

@@ -14,7 +14,7 @@ const LayerPanel: FC = () => {
         <FontAwesomeIcon icon={faPlus} /> Nova camada
       </AddLayerButton>
 
-      {layers.map((layer, index) => (
+      {[...layers].reverse().map((layer, index) => (
         <LayerItem
           key={layer.id}
           $selected={layer.id === selectedLayerId}

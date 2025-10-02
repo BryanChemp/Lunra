@@ -7,6 +7,7 @@ export interface Layer {
   name: string
   visible: boolean
   zIndex: number
+  canvasRef?: React.RefObject<HTMLCanvasElement | null>
 }
 
 interface LayerState {
@@ -17,20 +18,27 @@ interface LayerState {
   toggleVisibility: (id: string) => void
   selectLayer: (id: string) => void
   reorderLayer: (id: string, newIndex: number) => void
+  updateLayerCanvasRef: (id: string, ref: React.RefObject<HTMLCanvasElement | null>) => void
 }
 
 const initialLayers: Layer[] = [
   {
     id: crypto.randomUUID(),
+    name: "Background",
+    visible: true,
+    zIndex: 0,
+  },
+  {
+    id: crypto.randomUUID(),
     name: "Camada 1",
     visible: true,
-    zIndex: 0
-  }
+    zIndex: 1,
+  },
 ]
 
 export const useLayerStore = create<LayerState>((set, get) => ({
   layers: initialLayers,
-  selectedLayerId: initialLayers[0].id,
+  selectedLayerId: initialLayers[1].id,
 
   addLayer: (name = `Camada ${get().layers.length + 1}`) => {
     const newLayer: Layer = {
@@ -70,4 +78,10 @@ export const useLayerStore = create<LayerState>((set, get) => ({
     const reordered = layers.map((l, i) => ({ ...l, zIndex: i }))
     set({ layers: reordered })
   },
+
+  updateLayerCanvasRef: (id: string, ref: React.RefObject<HTMLCanvasElement | null>) => {
+    set(state => ({
+      layers: state.layers.map(l => l.id === id ? { ...l, canvasRef: ref } : l)
+    }))
+  }
 }))

@@ -78,8 +78,8 @@ const Canvas: FC = () => {
         {layers.map(layer =>
           <DrawingCanvas
             key={layer.id}
-            width={1270}
-            height={720}
+            width={2400}
+            height={1270}
             layerId={layer.id}
             style={{
               position: "absolute",
