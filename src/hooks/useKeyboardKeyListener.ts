@@ -23,7 +23,7 @@ export const useKeyboardKeyListener = (actions: ActionMap) => {
       const parts = comboStr.split("+").map((p) => normalizeKey(p.trim()))
       arr.push({ parts, fn: actions[comboStr] })
     }
-    // ordenar por tamanho decrescente → combos maiores têm prioridade
+
     arr.sort((a, b) => b.parts.length - a.parts.length)
     combosRef.current = arr
   }, [actions])

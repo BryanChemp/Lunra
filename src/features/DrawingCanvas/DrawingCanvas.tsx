@@ -3,6 +3,8 @@ import { useDrawingStore } from "../../stores/useDrawingStore"
 import { useCanvasStore } from "../../stores/useCanvasStore"
 import { useLayerStore } from "../../stores/useLayerStore"
 import { useKeyboardKeyListener } from "../../hooks/useKeyboardKeyListener"
+import { DefaultShortcutKeymap } from "../../preferences/keymap"
+import { useStateStack } from "./hooks/useStateStack"
 
 type Props = {
   width: number
@@ -15,28 +17,27 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const isDrawingRef = useRef(false)
   const lastPosRef = useRef<{ x: number; y: number } | null>(null)
+  const fillLockedRef = useRef(false)
 
   const { scale, isSpace, dragging } = useCanvasStore()
   const { brush, tool } = useDrawingStore();
   const { layers } = useLayerStore();
   const layer = layers.find((l) => l.id === layerId);
 
+  const { undo, redo, saveState } = useStateStack(canvasRef);
+  useKeyboardKeyListener({
+    [DefaultShortcutKeymap.UNDO]: undo,
+    [DefaultShortcutKeymap.REDO]: redo,
+    [DefaultShortcutKeymap.SAVE]: () => {},
+    "Control+y": redo,
+    "Meta+z": redo
+  })
+
   const handMode = tool === "hand";
   const eraseMode = tool === "eraser";
   const fillMode = tool === "fill";
   
   const isPanning = (isSpace || handMode) && dragging;
-
-  const undoStack = useRef<ImageData[]>([])
-  const redoStack = useRef<ImageData[]>([])
-
-  useEffect(() => {
-    if (!canvasRef.current) return
-    const ctx = canvasRef.current.getContext("2d")
-    if (!ctx) return
-    const snapshot = ctx.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height)
-    undoStack.current.push(snapshot)
-  }, [])
 
   useEffect(() => {
     const c = canvasRef.current
@@ -57,47 +58,6 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
     }
   }, [isPanning])
 
-  const saveState = () => {
-    if (!canvasRef.current) return
-    const ctx = canvasRef.current.getContext("2d")
-    if (!ctx) return
-    const snapshot = ctx.getImageData(0, 0, canvasRef.current.width, canvasRef.current.height)
-    undoStack.current.push(snapshot)
-    // ao salvar nova ação, limpar o redo
-    redoStack.current = []
-  }
-
-  const undo = () => {
-    if (!canvasRef.current) return
-    const ctx = canvasRef.current.getContext("2d")
-    if (!ctx) return
-    if (undoStack.current.length > 1) {
-      const last = undoStack.current.pop()!
-      redoStack.current.push(last)
-      const prev = undoStack.current[undoStack.current.length - 1]
-      ctx.putImageData(prev, 0, 0)
-    }
-  }
-
-  const redo = () => {
-    console.log("passando no redo")
-    if (!canvasRef.current) return
-    const ctx = canvasRef.current.getContext("2d")
-    if (!ctx) return
-    if (redoStack.current.length > 0) {
-      const snapshot = redoStack.current.pop()!
-      undoStack.current.push(snapshot)
-      ctx.putImageData(snapshot, 0, 0)
-    }
-  }
-
-  useKeyboardKeyListener({
-    "Control+z": undo,
-    "Control+Shift+z": redo,
-    "Control+y": redo,
-    "Meta+z": redo
-  })
-
   const getLocalCanvasPoint = (e: MouseEvent | React.MouseEvent) => {
     const c = canvasRef.current!
     const rect = c.getBoundingClientRect()
@@ -108,7 +68,7 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
     return { x: px * cssToCanvasX, y: py * cssToCanvasY, cssToCanvasX, cssToCanvasY }
   }
 
-    const getPixelColor = (imageData: ImageData, x: number, y: number) => {
+  const getPixelColor = (imageData: ImageData, x: number, y: number) => {
     const index = (y * imageData.width + x) * 4
     const d = imageData.data
     return [d[index], d[index + 1], d[index + 2], d[index + 3]]
@@ -122,46 +82,55 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
     return [r, g, b, Math.round(opacity * 255)]
   }
 
-  const floodFill = (imageData: ImageData, x: number, y: number, targetColor: number[], fillColor: number[]) => {
-    const width = imageData.width
-    const height = imageData.height
-    const data = imageData.data
-    const stack = [[x, y]]
+  const floodFillScanline = (imageData: ImageData, x: number, y: number, targetColor: number[], fillColor: number[]) => {
+    const width = imageData.width;
+    const height = imageData.height;
+    const data = imageData.data;
 
     const matchColor = (px: number, py: number) => {
-      const idx = (py * width + px) * 4
+      const idx = (py * width + px) * 4;
       return (
         data[idx] === targetColor[0] &&
         data[idx + 1] === targetColor[1] &&
         data[idx + 2] === targetColor[2] &&
         data[idx + 3] === targetColor[3]
-      )
-    }
+      );
+    };
 
     const setColor = (px: number, py: number) => {
-      const idx = (py * width + px) * 4
-      data[idx] = fillColor[0]
-      data[idx + 1] = fillColor[1]
-      data[idx + 2] = fillColor[2]
-      data[idx + 3] = fillColor[3]
-    }
+      const idx = (py * width + px) * 4;
+      data[idx] = fillColor[0];
+      data[idx + 1] = fillColor[1];
+      data[idx + 2] = fillColor[2];
+      data[idx + 3] = fillColor[3];
+    };
+
+    const stack: [number, number][] = [[x, y]];
 
     while (stack.length) {
-      const [px, py] = stack.pop()!
-      if (px < 0 || py < 0 || px >= width || py >= height) continue
-      if (!matchColor(px, py)) continue
-      setColor(px, py)
-      stack.push([px + 1, py])
-      stack.push([px - 1, py])
-      stack.push([px, py + 1])
-      stack.push([px, py - 1])
+      const [px, py] = stack.pop()!;
+      if (!matchColor(px, py)) continue;
+
+      let left = px;
+      let right = px;
+
+      while (left > 0 && matchColor(left - 1, py)) left--;
+      while (right < width - 1 && matchColor(right + 1, py)) right++;
+
+      for (let i = left; i <= right; i++) {
+        setColor(i, py);
+        if (py > 0 && matchColor(i, py - 1)) stack.push([i, py - 1]);
+        if (py < height - 1 && matchColor(i, py + 1)) stack.push([i, py + 1]);
+      }
     }
-  }
+  };
 
   const startDrawing = (e: React.MouseEvent) => {
     if (isSpace || !layer?.visible) return
     if ("button" in e && e.button !== 0) return
 
+    saveState();
+    
     if (fillMode && canvasRef.current) {
       const c = canvasRef.current
       const ctx = c.getContext("2d")
@@ -171,7 +140,16 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
       const imageData = ctx.getImageData(0, 0, c.width, c.height)
       const targetColor = getPixelColor(imageData, Math.floor(x), Math.floor(y))
       const fillColor = hexToRgba(brush.color, brush.opacity || 1)
-      floodFill(imageData, Math.floor(x), Math.floor(y), targetColor, fillColor)
+
+      // se a cor do pixel clicado já é igual à cor do brush, não faz nada
+      if (
+        targetColor[0] === fillColor[0] &&
+        targetColor[1] === fillColor[1] &&
+        targetColor[2] === fillColor[2] &&
+        targetColor[3] === fillColor[3]
+      ) return
+
+      floodFillScanline(imageData, Math.floor(x), Math.floor(y), targetColor, fillColor)
       ctx.putImageData(imageData, 0, 0)
       return
     }
@@ -180,7 +158,6 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
     const p = getLocalCanvasPoint(e)
     lastPosRef.current = { x: p.x, y: p.y }
   }
-
 
   const stopDrawing = () => {
     if (!isDrawingRef.current) return

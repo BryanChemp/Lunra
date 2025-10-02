@@ -27,7 +27,7 @@ export const useCanvasStore = create<CanvasState>((set, get) => ({
 
   setScale: (scale) => set({ scale }),
 
-  zoomAt: (mx, my, deltaY, rect) => {
+  zoomAt: (mx, my, deltaY) => {
     const zoomIntensity = 0.07
     const factor = deltaY < 0 ? 1 + zoomIntensity : 1 - zoomIntensity
 
