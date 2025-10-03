@@ -1,4 +1,4 @@
-import { useRef, type FC, useLayoutEffect } from "react"
+import { useRef, type FC, useLayoutEffect, useState, useCallback } from "react"
 import { useDrawingStore } from "../../stores/useDrawingStore"
 import { useCanvasStore } from "../../stores/useCanvasStore"
 import { useLayerStore } from "../../stores/useLayerStore"
@@ -9,6 +9,7 @@ import { useFloodFill } from "./hooks/useFloodFill"
 import { useBrushDrawing } from "./hooks/useBrushDrawing"
 import { useDrawingSetup } from "./hooks/useDrawingSetup"
 import { hexToRgbaArray } from "../../utils/colorsUtils"
+import type { PressureSettings } from "../../types/CanvasTypes"
 
 type Props = {
   width: number
@@ -26,9 +27,31 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
   const { layers, updateLayerCanvasRef } = useLayerStore()
   const layer = layers.find((l) => l.id === layerId)
 
+  const [pressureSettings, setPressureSettings] = useState<PressureSettings>({
+    enablePressure: true,
+    minPressure: 0.3,
+    maxPressure: 1.0,
+    pressureSensitivity: 0.7,
+    taperStart: false,
+    taperEnd: true,
+    velocityInfluence: 0.4
+  })
+
+  const [forceStrongPressure, setForceStrongPressure] = useState(false)
+  const [disablePressure, setDisablePressure] = useState(false)
+
   const { undo, redo, saveState } = useStateStack(canvasRef)
   const { getPixelColor, floodFillScanline } = useFloodFill()
-  const { lastPosRef, drawStroke } = useBrushDrawing(canvasRef, brush, scale, tool === "eraser")
+  
+  const { lastPosRef, drawStroke, resetStroke, getStrokeDebugInfo } = useBrushDrawing(
+    canvasRef, 
+    brush, 
+    scale, 
+    tool === "eraser",
+    pressureSettings,
+    forceStrongPressure,
+    disablePressure
+  )
 
   useKeyboardKeyListener({
     [DefaultShortcutKeymap.UNDO]: undo,
@@ -36,7 +59,66 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
     [DefaultShortcutKeymap.SAVE]: () => {},
     "Control+y": redo,
     "Meta+z": redo,
+    
+    "Shift": () => {
+      console.log("Shift pressionado - Pressão forte ativada");
+      setForceStrongPressure(true);
+    },
+    "Control": () => {
+      console.log("Ctrl pressionado - Pressão desativada");
+      setDisablePressure(true);
+    },
+    "Alt": () => {
+      console.log("Alt pressionado - Modo suave ativado");
+      setPressureSettings(prev => ({
+        ...prev,
+        minPressure: 0.2,
+        maxPressure: 0.7,
+        sensitivity: 0.3
+      }));
+    },
+    "Control+Shift": () => {
+      console.log("Ctrl+Shift - Pressão máxima constante");
+      setPressureSettings(prev => ({
+        ...prev,
+        minPressure: 1.0,
+        maxPressure: 1.0,
+        enablePressure: true
+      }));
+    },
+    "Control+Alt": () => {
+      console.log("Ctrl+Alt - Reset configurações de pressão");
+      setPressureSettings({
+        enablePressure: true,
+        minPressure: 0.3,
+        maxPressure: 1.0,
+        pressureSensitivity: 0.7,
+        taperStart: false,
+        taperEnd: true,
+        velocityInfluence: 0.4
+      });
+    }
   })
+
+  useKeyboardKeyListener({
+    "Shift": () => {
+      console.log("Shift solto - Pressão forte desativada");
+      setForceStrongPressure(false);
+    },
+    "Control": () => {
+      console.log("Ctrl solto - Pressão reativada");
+      setDisablePressure(false);
+    },
+    "Alt": () => {
+      console.log("Alt solto - Configurações normais");
+      setPressureSettings(prev => ({
+        ...prev,
+        minPressure: 0.3,
+        maxPressure: 1.0,
+        sensitivity: 0.7
+      }));
+    }
+  }, "keyup")
 
   const handMode = tool === "hand"
   const fillMode = tool === "fill"
@@ -85,12 +167,26 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
     isDrawingRef.current = true
     const p = getLocalCanvasPoint(e)
     lastPosRef.current = { x: p.x, y: p.y }
+    
+    console.log("Iniciando stroke com pressão simulada", {
+      forceStrongPressure,
+      disablePressure,
+      pressureSettings
+    });
   }
 
   const stopDrawing = () => {
     if (!isDrawingRef.current) return
     isDrawingRef.current = false
     lastPosRef.current = null
+    resetStroke()
+    
+    // Debug opcional
+    const debugInfo = getStrokeDebugInfo();
+    if (debugInfo) {
+      console.log("Stroke finalizado:", debugInfo);
+    }
+    
     saveState()
   }
 
@@ -102,6 +198,7 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
       lastPosRef.current = { x: p.x, y: p.y }
       return
     }
+    
     drawStroke(p, last)
     lastPosRef.current = { x: p.x, y: p.y }
   }
