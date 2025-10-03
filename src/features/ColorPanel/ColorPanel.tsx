@@ -1,6 +1,6 @@
 import { type FC } from "react"
 import styled from "styled-components"
-import GradientPanel from "./GradientPanel/GradientPanel"
+import GradientPanel from "./components/GradientPanel"
 
 const ColorPanel: FC = () => {
   return (

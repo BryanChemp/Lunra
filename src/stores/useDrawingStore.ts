@@ -1,14 +1,6 @@
 import { create } from "zustand"
-
-export type Tool = "brush" | "eraser" | "select" | "fill" | "hand" 
-
-type Brush = {
-  size: number;
-  color: string;
-  opacity?: number;
-  shape?: HTMLImageElement | "circle" | "square";
-  spacing?: number;
-};
+import type { Tool } from "../types/ToolsTypes";
+import type { Brush } from "../types/BrushTypes";
 
 type DrawingState = {
   brush: Brush

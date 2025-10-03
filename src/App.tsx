@@ -1,5 +1,5 @@
 import styled, { ThemeProvider } from 'styled-components';
-import { theme } from './preferences/theme';
+import { theme } from './constants/theme';
 import Canvas from './features/Canvas/Canvas';
 import MenuLeft from './features/MenuLeft/MenuLeft';
 import MenuRight from './features/MenuRight/MenuRight';

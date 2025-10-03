@@ -1,62 +1,21 @@
-import { useRef, useEffect, type FC } from "react"
+import { useRef, type FC } from "react"
 import styled from "styled-components"
 import DrawingCanvas from "../DrawingCanvas/DrawingCanvas"
 import { useCanvasStore } from "../../stores/useCanvasStore"
 import { useLayerStore } from "../../stores/useLayerStore"
-import { useDrawingStore } from "../../stores/useDrawingStore"
+import { useCanvasZoom } from "./hooks/useCanvasZoom"
+import { useCanvasShortcuts } from "./hooks/useCanvasShortcuts"
+import { useCanvasPan } from "./hooks/useCanvasPan"
 
 const Canvas: FC = () => {
-  const { offset, scale, dragging, isSpace, setDragging, setIsSpace, moveOffset, zoomAt } = useCanvasStore()
-  const { tool } = useDrawingStore();
+  const { offset, scale } = useCanvasStore()
   const { layers, selectedLayerId } = useLayerStore()
 
-  const handMode = tool === "hand";
-
-  const lastPos = useRef({ x: 0, y: 0 })
   const containerRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    const el = containerRef.current
-    if (!el) return
-
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault()
-      zoomAt(
-        e.clientX - el.getBoundingClientRect().left,
-        e.clientY - el.getBoundingClientRect().top,
-        e.deltaY,
-        el.getBoundingClientRect()
-      )
-    }
-
-    el.addEventListener("wheel", handleWheel, { passive: false })
-    return () => el.removeEventListener("wheel", handleWheel)
-  }, [zoomAt])
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.code === "Space") setIsSpace(true)
-  }
-  const handleKeyUp = (e: React.KeyboardEvent) => {
-    if (e.code === "Space") setIsSpace(false)
-  }
-
-  const startDrag = (e: React.MouseEvent) => {
-    if (isSpace || handMode) {
-      setDragging(true)
-      lastPos.current = { x: e.clientX, y: e.clientY }
-      e.preventDefault()
-    }
-  }
-
-  const stopDrag = () => setDragging(false)
-
-  const onDrag = (e: React.MouseEvent) => {
-    if (!dragging) return
-    const dx = e.clientX - lastPos.current.x
-    const dy = e.clientY - lastPos.current.y
-    lastPos.current = { x: e.clientX, y: e.clientY }
-    moveOffset(dx, dy)
-  }
+  useCanvasZoom(containerRef)
+  const { handleKeyDown, handleKeyUp } = useCanvasShortcuts()
+  const { startDrag, stopDrag, onDrag } = useCanvasPan()
 
   return (
     <Container
@@ -75,7 +34,7 @@ const Canvas: FC = () => {
           transformOrigin: "0 0",
         }}
       >
-        {layers.map(layer =>
+        {layers.map(layer => (
           <DrawingCanvas
             key={layer.id}
             width={2400}
@@ -89,7 +48,7 @@ const Canvas: FC = () => {
               pointerEvents: layer.id === selectedLayerId ? "auto" : "none",
             }}
           />
-        )}
+        ))}
       </CanvasWrapper>
     </Container>
   )
