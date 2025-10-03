@@ -5,14 +5,6 @@ export function useFloodFill() {
     return [d[index], d[index + 1], d[index + 2], d[index + 3]]
   }
 
-  const hexToRgba = (hex: string, opacity: number) => {
-    const bigint = parseInt(hex.replace("#", ""), 16)
-    const r = (bigint >> 16) & 255
-    const g = (bigint >> 8) & 255
-    const b = bigint & 255
-    return [r, g, b, Math.round(opacity * 255)]
-  }
-
   const floodFillScanline = (
     imageData: ImageData,
     x: number,
@@ -62,5 +54,5 @@ export function useFloodFill() {
     }
   }
 
-  return { getPixelColor, hexToRgba, floodFillScanline }
+  return { getPixelColor, floodFillScanline }
 }

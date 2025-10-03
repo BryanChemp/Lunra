@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import type { Brush } from "../../../types/BrushTypes";
 import type { CanvasPoint, LastCanvasPoint } from "../../../types/CanvasTypes";
+import { hexToRgba } from "../../../utils/colorsUtils";
 
 export function useBrushDrawing(
 	canvasRef: React.RefObject<HTMLCanvasElement | null>,
@@ -22,11 +23,12 @@ export function useBrushDrawing(
 		const spacingCanvas = (brush.spacing || 1) * p.cssToCanvasX;
 		const brushSizeCanvas = brush.size * scale * p.cssToCanvasX;
 
+		const fillColor = hexToRgba(brush.color, brush.opacity ?? 1);
+
 		for (let i = 0; i < dist; i += spacingCanvas) {
 			const t = i / dist;
 			const ix = last.x + dx * t;
 			const iy = last.y + dy * t;
-			ctx.globalAlpha = brush.opacity || 1;
 
 			if (eraseMode) {
 				ctx.clearRect(
@@ -36,6 +38,7 @@ export function useBrushDrawing(
 					brushSizeCanvas
 				);
 			} else if (brush.shape instanceof HTMLImageElement) {
+				ctx.globalAlpha = brush.opacity ?? 1;
 				ctx.drawImage(
 					brush.shape,
 					ix - brushSizeCanvas / 2,
@@ -43,8 +46,9 @@ export function useBrushDrawing(
 					brushSizeCanvas,
 					brushSizeCanvas
 				);
+				ctx.globalAlpha = 1;
 			} else if (brush.shape === "square") {
-				ctx.fillStyle = brush.color;
+				ctx.fillStyle = fillColor;
 				ctx.fillRect(
 					ix - brushSizeCanvas / 2,
 					iy - brushSizeCanvas / 2,
@@ -52,12 +56,11 @@ export function useBrushDrawing(
 					brushSizeCanvas
 				);
 			} else {
-				ctx.fillStyle = brush.color;
+				ctx.fillStyle = fillColor;
 				ctx.beginPath();
 				ctx.arc(ix, iy, brushSizeCanvas / 2, 0, Math.PI * 2);
 				ctx.fill();
 			}
-			ctx.globalAlpha = 1;
 		}
 	};
 

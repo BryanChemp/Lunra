@@ -14,14 +14,14 @@ export function useDrawingSetup(
     c.style.height = `${height}px`
     c.width = Math.round(width * dpr)
     c.height = Math.round(height * dpr)
-
     const ctx = c.getContext("2d")
-    if (ctx) {
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
-      if (withBackground) {
-        ctx.fillStyle = "#ffffff"
-        ctx.fillRect(0, 0, c.width, c.height)
-      }
+    if (!ctx) return
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.clearRect(0, 0, c.width, c.height)
+    if (withBackground) {
+      ctx.fillStyle = "#ffffffff"
+      ctx.fillRect(0, 0, c.width, c.height)
     }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
   }, [width, height, canvasRef, withBackground])
 }

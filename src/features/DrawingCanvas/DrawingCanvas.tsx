@@ -8,6 +8,7 @@ import { useStateStack } from "./hooks/useStateStack"
 import { useFloodFill } from "./hooks/useFloodFill"
 import { useBrushDrawing } from "./hooks/useBrushDrawing"
 import { useDrawingSetup } from "./hooks/useDrawingSetup"
+import { hexToRgbaArray } from "../../utils/colorsUtils"
 
 type Props = {
   width: number
@@ -26,7 +27,7 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
   const layer = layers.find((l) => l.id === layerId)
 
   const { undo, redo, saveState } = useStateStack(canvasRef)
-  const { getPixelColor, hexToRgba, floodFillScanline } = useFloodFill()
+  const { getPixelColor, floodFillScanline } = useFloodFill()
   const { lastPosRef, drawStroke } = useBrushDrawing(canvasRef, brush, scale, tool === "eraser")
 
   useKeyboardKeyListener({
@@ -48,7 +49,7 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
     }
   }, [layer, canvasRef, updateLayerCanvasRef])
 
-  useDrawingSetup(canvasRef, width, height, layers.length === 1)
+  useDrawingSetup(canvasRef, width, height, layer?.zIndex == 0)
 
   const getLocalCanvasPoint = (e: MouseEvent | React.MouseEvent) => {
     const c = canvasRef.current!
@@ -73,10 +74,10 @@ const DrawingCanvas: FC<Props> = ({ width, height, layerId, style }) => {
       const { x, y } = getLocalCanvasPoint(e)
       const imageData = ctx.getImageData(0, 0, c.width, c.height)
       const targetColor = getPixelColor(imageData, Math.floor(x), Math.floor(y))
-      const fillColor = hexToRgba(brush.color, brush.opacity || 1)
-      if (targetColor.join() !== fillColor.join()) {
-        floodFillScanline(imageData, Math.floor(x), Math.floor(y), targetColor, fillColor)
-        ctx.putImageData(imageData, 0, 0)
+      const fillColor = hexToRgbaArray(brush.color, brush.opacity ?? 1);
+      if (!targetColor.every((v, i) => v === fillColor[i])) {
+        floodFillScanline(imageData, Math.floor(x), Math.floor(y), targetColor, fillColor);
+        ctx.putImageData(imageData, 0, 0);
       }
       return
     }
